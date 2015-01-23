@@ -1,0 +1,32 @@
+{
+  "name": "remote-task",
+  "version": "0.0.1",
+  "description": "Task runner",
+  "main": "index.js",
+  "dependencies": {
+    "bluebird": "^2.8.2",
+    "terminus": "^1.0.11",
+    "through2": "^1.1.1",
+    "through2-jsonreader": "0.0.1",
+    "through2-jsonwriter": "0.0.1",
+    "through2-linereader": "0.0.1",
+    "through2-linewriter": "0.0.1",
+    "winston": "^0.8.3",
+    "winston-papertrail": "^1.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/faradayio/remote-task.git"
+  },
+  "keywords": [
+    "remote",
+    "shell",
+    "ssh",
+    "papertrail"
+  ],
+  "author": "Tristan Davies <tristan@faraday.io>",
+  "bugs": {
+    "url": "https://github.com/faradayio/remote-task/issues"
+  },
+  "homepage": "https://github.com/faradayio/remote-task"
+}
