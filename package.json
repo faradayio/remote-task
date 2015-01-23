@@ -25,6 +25,7 @@
     "papertrail"
   ],
   "author": "Tristan Davies <tristan@faraday.io>",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/faradayio/remote-task/issues"
   },
