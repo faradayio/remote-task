@@ -53,9 +53,9 @@ module.exports.remote = function(){
     });
   });
 
-  return function(data, cb){
+  return function(command, cb){
     transformStream.write({
-      data: data,
+      data: {"command": command},
       cb: cb
     });
   };
