@@ -1,10 +1,11 @@
 {
   "name": "remote-task",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Task runner",
   "main": "index.js",
   "dependencies": {
     "bluebird": "^2.8.2",
+    "shell-escape": "^0.1.0",
     "terminus": "^1.0.11",
     "through2": "^1.1.1",
     "through2-jsonreader": "0.0.1",

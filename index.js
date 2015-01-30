@@ -4,6 +4,7 @@ var spawn = require('child_process').spawn;
 var terminus = require('terminus');
 var through2 = require('through2');
 var Promise = require('bluebird');
+var shellEscape = require('shell-escape');
 
 var winston = require('winston');
 require('winston-papertrail').Papertrail;
@@ -78,35 +79,7 @@ Runner.prototype.onConnection = function(socket){
     self.clients.splice(self.clients.indexOf(socket), 1);
   });
 
-  socket
-    .pipe(lineReader())
-    .pipe(jsonReader())
-    .pipe(this.commandStream())
-    .pipe(jsonWriter())
-    .pipe(lineWriter())
-    .pipe(socket);
-};
-
-Runner.prototype.commandStream = function(){
-  var self = this;
-  return through2.obj(function(chunk, enc, callback){
-    if (!Array.isArray(chunk)) {
-      callback(null, {status: 'invalid'});
-    } else {
-      self.runCommand(chunk)
-        .then(function(code){
-          callback(null, {status: 'success', code: code});
-        })
-        .catch(function(code){
-          callback(null, {status: 'failure', code: code});
-        });
-    }
-  });
-};
-
-Runner.prototype.runCommand = function(args){
-  var command = args.shift();
-  var child = spawn(command, args, this.options);
+  var bash = spawn('bash', [], this.options);
 
   var logger = new winston.Logger({
     transports: [
@@ -117,51 +90,73 @@ Runner.prototype.runCommand = function(args){
     ]
   });
 
-  var logger_ended = 0;
-  var logger_cleanup = function(){
-    logger_ended++;
-    if (logger_ended == 3) {
-      setTimeout(logger.close.bind(logger), 10000);
-    }
-  };
-
-  child.stdout
-    .on('end', logger_cleanup)
-    .pipe(lineReader(true))
-    .pipe(terminus(function(chunk, enc, cb){
-      logger.log('info', chunk.toString());
-      cb();
-    }));
-
-  child.stderr
-    .on('end', logger_cleanup)
-    .pipe(lineReader(true))
-    .pipe(terminus(function(chunk, enc, cb){
-      logger.error(chunk.toString());
-      cb();
-    }));
-
-  return new Promise(function(resolve, reject){
-    var error_triggered = false;
-
-    child.on('error', function(err){
-      error_triggered = true;
-      logger.log('critical', 'task failed', err);
-      reject(-1);
-
-      logger_cleanup();
-    });
-
-    child.on('exit', function(code){
-      if (error_triggered) return;
-      if (code === 0) {
-        resolve(code);
-      } else {
-        logger.log('critical', 'task failed');
-        reject(code);
-      }
-      logger_cleanup();
-    });
-
+  bash.stdout.on('data', function(data, enc){
+    logger.log(data.toString());
   });
+  bash.stderr.on('data', function(data, enc){
+    logger.error(data.toString());
+  });
+
+  var validator = this.validate();
+  var responder = jsonWriter();
+
+  validator.on('error', function(err){
+    responder.write({
+      status: 'error',
+      error: err.stack || err
+    });
+  });
+
+  bash.on('exit', function(code, signal){
+    var message = 'bash closed with code '+code+', signal '+signal;
+    if (code === 0) {
+      logger.info(message);
+      responder.write({
+        status: 'success'
+      });
+    } else {
+      logger.error(message);
+      responder.write({
+        status: 'error',
+        code: code,
+        signal: signal
+      });
+    }
+    logger.close();
+    responder.end();
+  });
+
+  socket
+    .pipe(lineReader())
+    .pipe(jsonReader())
+    .pipe(through2.obj(function(chunk, enc, cb){
+      if (typeof chunk == 'object' && chunk.type == 'end') {
+        bash.stdin.end();
+      } else {
+        this.push(chunk);
+      }
+      cb();
+    }))
+    .pipe(validator)
+    .pipe(this.escape())
+    .pipe(bash.stdin);
+
+  responder
+    .pipe(lineWriter())
+    .pipe(socket);
+};
+
+Runner.prototype.escape = function(){
+  return through2.obj(function(chunk, enc, callback){
+    callback(null, shellEscape(chunk));
+  })
+};
+Runner.prototype.validate = function(){
+  return through2.obj(function(chunk, enc, callback){
+    if (array.isArray(chunk)) {
+      callback(null, chunk);
+    } else {
+      callback('invalid: not an array');
+    }
+  })
 };
