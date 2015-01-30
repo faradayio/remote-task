@@ -46,7 +46,7 @@ module.exports.remote = function(){
   var streams = this.remoteStreams.apply(this, arguments);
 
   var transformStream = through2.obj(function(chunk, enc, cb){
-    streams.input.write(chunk.data, enc);
+    streams.input.write(chunk.command, enc);
     streams.output.once('data', function(data){
       chunk.cb(data);
       cb(null, data);
@@ -55,7 +55,7 @@ module.exports.remote = function(){
 
   return function(command, cb){
     transformStream.write({
-      data: {"command": command},
+      command: command,
       cb: cb
     });
   };
@@ -90,10 +90,10 @@ Runner.prototype.onConnection = function(socket){
 Runner.prototype.commandStream = function(){
   var self = this;
   return through2.obj(function(chunk, enc, callback){
-    if (typeof chunk != 'object' || !Array.isArray(chunk.command)) {
+    if (!Array.isArray(chunk)) {
       callback(null, {status: 'invalid'});
     } else {
-      self.runCommand(chunk.command)
+      self.runCommand(chunk)
         .then(function(code){
           callback(null, {status: 'success', code: code});
         })
