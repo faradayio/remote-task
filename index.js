@@ -5,61 +5,22 @@ var terminus = require('terminus');
 var through2 = require('through2');
 var Promise = require('bluebird');
 var shellEscape = require('shell-escape');
+var es = require('event-stream');
 
 var winston = require('winston');
 require('winston-papertrail').Papertrail;
-
-var lineReader = require('through2-linereader');
-var lineWriter = require('through2-linewriter');
-var jsonReader = require('through2-jsonreader');
-var jsonWriter = require('through2-jsonwriter');
 
 module.exports = function(logPort, options){
   return new Runner(logPort, options);
 };
 
-module.exports.remoteStreams = function(){
-  var input = jsonWriter();
-  var output = input
-    .pipe(lineWriter())
-    .pipe(net.connect.apply(net, arguments))
-    .pipe(lineReader())
-    .pipe(jsonReader());
-
-  return {
-    input: input,
-    output: output
-  };
-};
-
 module.exports.remoteStream = function(){
-  var streams = this.remoteStreams.apply(this, arguments);
+  var input = es.stringify();
+  var output = input.pipe(net.connect.apply(net, arguments))
+    .pipe(es.split())
+    .pipe(es.parse());
 
-  return through2.obj(function(chunk, enc, cb){
-    streams.input.write(chunk, enc);
-    streams.output.once('data', function(data){
-      cb(null, data);
-    });
-  });
-};
-
-module.exports.remote = function(){
-  var streams = this.remoteStreams.apply(this, arguments);
-
-  var transformStream = through2.obj(function(chunk, enc, cb){
-    streams.input.write(chunk.command, enc);
-    streams.output.once('data', function(data){
-      chunk.cb(data);
-      cb(null, data);
-    });
-  });
-
-  return function(command, cb){
-    transformStream.write({
-      command: command,
-      cb: cb
-    });
-  };
+  return es.duplex(input, output);
 };
 
 function Runner(logPort, options){
@@ -98,7 +59,29 @@ Runner.prototype.onConnection = function(socket){
   });
 
   var validator = this.validate();
-  var responder = jsonWriter();
+  var responder = es.stringify();
+
+  socket
+    .pipe(es.split())
+    .pipe(es.parse())
+    .pipe(through2.obj(function(chunk, enc, cb){
+      if (typeof chunk == 'object' && chunk.end == true) {
+        bash.stdin.end();
+      } else {
+        this.push(chunk);
+      }
+      cb();
+    }))
+    .pipe(validator)
+    .pipe(this.stringify())
+    .pipe(bash.stdin);
+
+  responder
+    .pipe(through2.obj(function(chunk, enc, cb){
+      console.log('responding', chunk);
+      cb(null, chunk);
+    }))
+    .pipe(socket);
 
   validator.on('error', function(err){
     responder.write({
@@ -125,35 +108,17 @@ Runner.prototype.onConnection = function(socket){
     logger.close();
     responder.end();
   });
-
-  socket
-    .pipe(lineReader())
-    .pipe(jsonReader())
-    .pipe(through2.obj(function(chunk, enc, cb){
-      if (typeof chunk == 'object' && chunk.type == 'end') {
-        bash.stdin.end();
-      } else {
-        this.push(chunk);
-      }
-      cb();
-    }))
-    .pipe(validator)
-    .pipe(this.escape())
-    .pipe(bash.stdin);
-
-  responder
-    .pipe(lineWriter())
-    .pipe(socket);
 };
 
-Runner.prototype.escape = function(){
+Runner.prototype.stringify = function(){
   return through2.obj(function(chunk, enc, callback){
-    callback(null, shellEscape(chunk));
+    var out = shellEscape(chunk)+'\n';
+    callback(null, out);
   })
 };
 Runner.prototype.validate = function(){
   return through2.obj(function(chunk, enc, callback){
-    if (array.isArray(chunk)) {
+    if (Array.isArray(chunk)) {
       callback(null, chunk);
     } else {
       callback('invalid: not an array');

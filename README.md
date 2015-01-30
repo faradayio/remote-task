@@ -30,9 +30,12 @@ Client:
 ```javascript
 var remoteTask = require('remote-task');
 
-var remoteControl = remoteTask.remote(3000, '127.0.0.1'); //IP address is optional, arguments are passed to net.connect()
+var remoteControl = remoteTask.remoteStream(3000, '127.0.0.1'); //IP address is optional, arguments are passed to net.connect()
 
-remoteControl(['echo', 'Hello, World!'], function(result){
+remoteControl.write(['cd', '/tmp']);
+remoteControl.write(['touch', 'helloworld']);
+
+remoteControl.on('data', function(result){
   console.log(result.status); //success, hopefully
 });
 ```

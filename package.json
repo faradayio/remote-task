@@ -1,17 +1,14 @@
 {
   "name": "remote-task",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Task runner",
   "main": "index.js",
   "dependencies": {
     "bluebird": "^2.8.2",
+    "event-stream": "^3.2.1",
     "shell-escape": "^0.1.0",
     "terminus": "^1.0.11",
     "through2": "^1.1.1",
-    "through2-jsonreader": "0.0.1",
-    "through2-jsonwriter": "0.0.1",
-    "through2-linereader": "0.0.1",
-    "through2-linewriter": "0.0.1",
     "winston": "^0.8.3",
     "winston-papertrail": "^1.0.1"
   },
