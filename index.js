@@ -4,7 +4,6 @@ var spawn = require('child_process').spawn;
 var terminus = require('terminus');
 var through2 = require('through2');
 var Promise = require('bluebird');
-var shellEscape = require('shell-escape');
 var es = require('event-stream');
 
 var winston = require('winston');
@@ -51,10 +50,14 @@ Runner.prototype.onConnection = function(socket){
     ]
   });
 
+  var inputLogs = [];
+  var bashLogs = [];
   bash.stdout.on('data', function(data, enc){
+    bashLogs.push(data.toString());
     logger.log(data.toString());
   });
   bash.stderr.on('data', function(data, enc){
+    bashLogs.push(data.toString());
     logger.error(data.toString());
   });
 
@@ -74,6 +77,10 @@ Runner.prototype.onConnection = function(socket){
     }))
     .pipe(validator)
     .pipe(this.stringify())
+    .pipe(through2.obj(function(line, enc, cb){
+      inputLogs.push(line);
+      cb(null, line);
+    }))
     .pipe(bash.stdin);
 
   responder
@@ -95,14 +102,18 @@ Runner.prototype.onConnection = function(socket){
     if (code === 0) {
       logger.info(message);
       responder.write({
-        status: 'success'
+        status: 'success',
+        logs: bashLogs.join('\n'),
+        input: inputLogs.join('')
       });
     } else {
       logger.error(message);
       responder.write({
         status: 'error',
         code: code,
-        signal: signal
+        signal: signal,
+        logs: bashLogs.join('\n'),
+        input: inputLogs.join('')
       });
     }
     logger.close();
@@ -112,7 +123,7 @@ Runner.prototype.onConnection = function(socket){
 
 Runner.prototype.stringify = function(){
   return through2.obj(function(chunk, enc, callback){
-    var out = shellEscape(chunk)+'\n';
+    var out = chunk.join(' ')+';\n';
     callback(null, out);
   })
 };
