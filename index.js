@@ -5,7 +5,7 @@ var terminus = require('terminus');
 var through2 = require('through2');
 var Promise = require('bluebird');
 var es = require('event-stream');
-var shellEscape = require('shell-escape');
+var shellEscape = require('./shellEscape');
 
 var winston = require('winston');
 require('winston-papertrail').Papertrail;
