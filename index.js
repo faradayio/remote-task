@@ -15,9 +15,12 @@ module.exports = function(logPort, options){
 
 module.exports.remoteStream = function(){
   var input = es.stringify();
-  var output = input.pipe(net.connect.apply(net, arguments))
+  var connection = net.connect.apply(net, arguments);
+  var output = input.pipe(connection)
     .pipe(es.split())
     .pipe(es.parse());
+
+  connection.on('error', output.emit.bind(output, 'error'));
 
   return es.duplex(input, output);
 };
