@@ -5,6 +5,7 @@ var terminus = require('terminus');
 var through2 = require('through2');
 var Promise = require('bluebird');
 var es = require('event-stream');
+var shellEscape = require('shell-escape');
 
 var winston = require('winston');
 require('winston-papertrail').Papertrail;
@@ -31,7 +32,7 @@ function Runner(logPort, options){
 
   this.clients = [];
   return net.createServer(this.onConnection.bind(this));
-};
+}
 
 Runner.prototype.onConnection = function(socket){
   this.clients.push(socket);
@@ -55,11 +56,11 @@ Runner.prototype.onConnection = function(socket){
 
   var inputLogs = [];
   var bashLogs = [];
-  bash.stdout.on('data', function(data, enc){
+  bash.stdout.on('data', function(data){
     bashLogs.push(data.toString());
     logger.log(data.toString());
   });
-  bash.stderr.on('data', function(data, enc){
+  bash.stderr.on('data', function(data){
     bashLogs.push(data.toString());
     logger.error(data.toString());
   });
@@ -71,7 +72,7 @@ Runner.prototype.onConnection = function(socket){
     .pipe(es.split())
     .pipe(es.parse())
     .pipe(through2.obj(function(chunk, enc, cb){
-      if (typeof chunk == 'object' && chunk.end == true) {
+      if (typeof chunk === 'object' && chunk.end === true) {
         bash.stdin.end();
       } else {
         this.push(chunk);
@@ -126,9 +127,9 @@ Runner.prototype.onConnection = function(socket){
 
 Runner.prototype.stringify = function(){
   return through2.obj(function(chunk, enc, callback){
-    var out = chunk.join(' ')+';\n';
+    var out = shellEscape(chunk)+';\n';
     callback(null, out);
-  })
+  });
 };
 Runner.prototype.validate = function(){
   return through2.obj(function(chunk, enc, callback){
@@ -137,5 +138,5 @@ Runner.prototype.validate = function(){
     } else {
       callback('invalid: not an array');
     }
-  })
+  });
 };
