@@ -1,17 +1,15 @@
 var net = require('net');
 var spawn = require('child_process').spawn;
 
-var terminus = require('terminus');
 var through2 = require('through2');
 var Promise = require('bluebird');
 var es = require('event-stream');
 var shellEscape = require('./shellEscape');
 
 var winston = require('winston');
-require('winston-papertrail').Papertrail;
 
-module.exports = function(logPort, options){
-  return new Runner(logPort, options);
+module.exports = function(logFile, options){
+  return new Runner(logFile, options);
 };
 
 module.exports.remoteStream = function(){
@@ -26,9 +24,16 @@ module.exports.remoteStream = function(){
   return es.duplex(input, output);
 };
 
-function Runner(logPort, options){
-  this.logPort = logPort;
+function Runner(logFile, options){
+  this.logFile = logFile;
   this.options = options || {};
+
+  this.logger = new (winston.Logger)({
+    transports: [
+      new (winston.transports.Console)(),
+      new (winston.transports.File)({ filename: logFile })
+    ]
+  });
 
   this.clients = [];
   return net.createServer(this.onConnection.bind(this));
@@ -39,20 +44,13 @@ Runner.prototype.onConnection = function(socket){
 
   var self = this;
 
+  var logger = this.logger;
+
   socket.on('end', function(){
     self.clients.splice(self.clients.indexOf(socket), 1);
   });
 
   var bash = spawn('bash', [], this.options);
-
-  var logger = new winston.Logger({
-    transports: [
-      new winston.transports.Papertrail({
-        host: 'logs.papertrailapp.com',
-        port: this.logPort
-      })
-    ]
-  });
 
   var inputLogs = [];
   var bashLogs = [];
@@ -73,6 +71,7 @@ Runner.prototype.onConnection = function(socket){
     .pipe(es.parse())
     .pipe(through2.obj(function(chunk, enc, cb){
       if (typeof chunk === 'object' && chunk.end === true) {
+        logger.log('ending bash stdin');
         bash.stdin.end();
       } else {
         this.push(chunk);
@@ -83,13 +82,14 @@ Runner.prototype.onConnection = function(socket){
     .pipe(this.stringify())
     .pipe(through2.obj(function(line, enc, cb){
       inputLogs.push(line);
+      logger.log('executing: '+line);
       cb(null, line);
     }))
     .pipe(bash.stdin);
 
   responder
     .pipe(through2.obj(function(chunk, enc, cb){
-      console.log('responding', chunk);
+      logger.log('responding', chunk);
       cb(null, chunk);
     }))
     .pipe(socket);
