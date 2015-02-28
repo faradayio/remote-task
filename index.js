@@ -56,7 +56,7 @@ Runner.prototype.onConnection = function(socket){
   var bashLogs = [];
   bash.stdout.on('data', function(data){
     bashLogs.push(data.toString());
-    logger.log(data.toString());
+    logger.info('stdout: '+data.toString());
   });
   bash.stderr.on('data', function(data){
     bashLogs.push(data.toString());
@@ -71,7 +71,7 @@ Runner.prototype.onConnection = function(socket){
     .pipe(es.parse())
     .pipe(through2.obj(function(chunk, enc, cb){
       if (typeof chunk === 'object' && chunk.end === true) {
-        logger.log('ending bash stdin');
+        logger.info('ending bash stdin');
         bash.stdin.end();
       } else {
         this.push(chunk);
@@ -82,14 +82,14 @@ Runner.prototype.onConnection = function(socket){
     .pipe(this.stringify())
     .pipe(through2.obj(function(line, enc, cb){
       inputLogs.push(line);
-      logger.log('executing: '+line);
+      logger.info('executing: '+line);
       cb(null, line);
     }))
     .pipe(bash.stdin);
 
   responder
     .pipe(through2.obj(function(chunk, enc, cb){
-      logger.log('responding', chunk);
+      logger.info('responding', chunk);
       cb(null, chunk);
     }))
     .pipe(socket);
