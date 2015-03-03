@@ -120,7 +120,6 @@ Runner.prototype.onConnection = function(socket){
         input: inputLogs.join('')
       });
     }
-    logger.close();
     responder.end();
   });
 };
