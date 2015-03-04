@@ -51,3 +51,7 @@ console.log(escaped);
 var escaped = shellescape(['hi\'?']);
 console.log(escaped);
 assert.strictEqual(escaped, "'hi'\\''?'");
+
+var escaped = shellescape(['--delimeter', '\\|']);
+console.log(escaped);
+assert.strictEqual(escaped, "--delimeter \\|");
