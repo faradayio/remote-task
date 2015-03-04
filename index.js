@@ -126,16 +126,20 @@ Runner.prototype.onConnection = function(socket){
 
 Runner.prototype.stringify = function(){
   return through2.obj(function(chunk, enc, callback){
-    var out = shellEscape(chunk)+';\n';
-    callback(null, out);
+    if (typeof chunk === 'string') {
+      callback(null, chunk+';\n');
+    } else {
+      var out = shellEscape(chunk)+';\n';
+      callback(null, out);
+    }
   });
 };
 Runner.prototype.validate = function(){
   return through2.obj(function(chunk, enc, callback){
-    if (Array.isArray(chunk)) {
+    if (Array.isArray(chunk) || typeof chunk === 'string') {
       callback(null, chunk);
     } else {
-      callback('invalid: not an array');
+      callback('invalid: not an array or string');
     }
   });
 };
