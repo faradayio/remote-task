@@ -3,7 +3,7 @@ var lameShellEscape = require('shell-escape');
 module.exports = shellEscape;
 
 function shellEscape(args){
-  var pipes = ['{', '}', '<', '>', '>>', '|', '&>', '2>&1', '&&', ';', '||'];
+  var pipes = ['{', '}', '<', '>', '>>', '|', '\\|', '&>', '2>&1', '&&', ';', '||'];
   var breaks = args.map(function(arg, i){
     return {
       arg: arg,
