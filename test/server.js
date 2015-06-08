@@ -150,13 +150,13 @@ describe('A server', function(){
         .expect(200, done);
     });
 
-    it('should be gone after it\'s deleted', function(done){
+    it('should be gone from GET /task/:pid after it\'s deleted', function(done){
       request(app)
         .get('/tasks/'+createdTask.pid)
         .expect(404, done);
     });
 
-    it('should be gone after it\'s deleted', function(done){
+    it('should be gone from GET /tasks after it\'s deleted', function(done){
       request(app)
         .get('/tasks')
         .set('Accept', 'application/json')
