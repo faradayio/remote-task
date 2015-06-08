@@ -1,14 +1,17 @@
 {
   "name": "remote-task",
-  "version": "0.6.5",
+  "version": "1.0.0",
   "description": "Task runner",
-  "main": "index.js",
+  "main": "src/index.js",
   "dependencies": {
-    "bluebird": "^2.8.2",
-    "event-stream": "^3.2.1",
-    "shell-escape": "^0.2.0",
-    "through2": "^1.1.1",
-    "winston": "^0.8.3"
+    "body-parser": "^1.12.4",
+    "express": "^4.12.4",
+    "request-promise": "^0.4.2",
+    "supertest": "^1.0.1",
+    "through2": "^0.6.5"
+  },
+  "scripts": {
+    "test": "mocha"
   },
   "repository": {
     "type": "git",
@@ -24,5 +27,8 @@
   "bugs": {
     "url": "https://github.com/faradayio/remote-task/issues"
   },
-  "homepage": "https://github.com/faradayio/remote-task"
+  "homepage": "https://github.com/faradayio/remote-task",
+  "devDependencies": {
+    "mocha": "^2.2.5"
+  }
 }
