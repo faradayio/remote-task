@@ -1,5 +1,6 @@
 var through = require('through2').obj;
 var request = require('request-promise');
+var Promise = require('bluebird');
 
 function client(baseUrl){
   var queue = [],
@@ -9,7 +10,7 @@ function client(baseUrl){
       errorCount = 0,
       pid, req, task;
 
-  function send(done) {
+  function send() {
     if (!queue.length && (!ending || ended)) {
       return Promise.resolve();
     }
@@ -81,7 +82,7 @@ function client(baseUrl){
     return send();
   }
 
-  var pollRetries = 0, pollTimeout = 0, polls = 0;
+  var pollRetries = 0, polls = 0;
 
   function pollForCompletion(delayed) {
     if (delayed) {

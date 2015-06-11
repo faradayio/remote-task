@@ -2,6 +2,7 @@ var express = require('express');
 var bodyParser = require('body-parser');
 var util = require('util');
 var fs = require('fs');
+var Promise = require('bluebird');
 var spawn = require('child_process').spawn;
 var through = require('through2').obj;
 var Stream = require('stream').Stream;

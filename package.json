@@ -4,6 +4,7 @@
   "description": "Task runner",
   "main": "src/index.js",
   "dependencies": {
+    "bluebird": "^2.9.27",
     "body-parser": "^1.12.4",
     "express": "^4.12.4",
     "request-promise": "^0.4.2",
