@@ -126,14 +126,22 @@ describe('A server', function(){
           assert.deepEqual(createdTask, task);
 
           var interval = setInterval(function(){
-            try {
-              fs.accessSync(process.cwd()+'/'+tmpFiles[0]);
-              fs.accessSync(process.cwd()+'/'+tmpFiles[1]);
-              clearInterval(interval);
-              clearTimeout(timeout);
-              done();
-            } catch (err) {
-              //:(
+            if (typeof fs.existsSync === 'function') {
+              if (fs.existsSync(process.cwd()+'/'+tmpFiles[0]) && fs.existsSync(process.cwd()+'/'+tmpFiles[1])) {
+                clearInterval(interval);
+                clearTimeout(timeout);
+                done();
+              }
+            } else {
+              try {
+                fs.accessSync(process.cwd()+'/'+tmpFiles[0]);
+                fs.accessSync(process.cwd()+'/'+tmpFiles[1]);
+                clearInterval(interval);
+                clearTimeout(timeout);
+                done();
+              } catch (err) {
+                //:(
+              }
             }
           });
 
