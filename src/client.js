@@ -88,8 +88,8 @@ function client(baseUrl){
     if (delayed) {
       return (new Promise(function(resolve){
 
-        var delay = 500;
-        if (polls <= 8) {
+        var delay = 4096;
+        if (polls <= 11) {
           delay = 10+Math.pow(2, polls); //EXPONENTIAL BACKOFF YAY
         }
         polls++;
