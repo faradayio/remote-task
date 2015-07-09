@@ -29,4 +29,31 @@ describe('A client', function(){
     cl.write('echo pretty good');
     cl.end();
   });
+
+  it('should be able to set a timeout', function(done){
+    var s = server().listen(9090);
+
+    var cl = client('http://localhost:9090', {timeout: 1000});
+
+    var data = [];
+
+    cl.on('data', function(datum){
+      data.push(datum);
+    }).on('error', function(err){
+      s.close();
+      done(err);
+    }).on('end', function(){
+      assert.equal(data.length, 1);
+      validateTask(data[0], true);
+      assert.equal(data[0].timeout, 1000);
+
+      s.close();
+      done();
+    });
+
+    cl.write('echo hi');
+    cl.write('echo how are you?');
+    cl.write('echo pretty good');
+    cl.end();
+  });
 });

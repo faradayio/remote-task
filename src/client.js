@@ -2,7 +2,7 @@ var through = require('through2').obj;
 var request = require('request-promise');
 var Promise = require('bluebird');
 
-function client(baseUrl){
+function client(baseUrl, options){
   var queue = [],
       ended = false,
       ending = false,
@@ -35,15 +35,20 @@ function client(baseUrl){
 
     var end = ending;
 
+    var post = {
+      url: baseUrl+url,
+      json: true,
+      body: {
+        commands: commands,
+        end: end
+      }
+    };
+    for (var key in options) {
+      post.body[key] = options[key];
+    }
+
     req = (
-      request.post({
-        url: baseUrl+url,
-        json: true,
-        body: {
-          commands: commands,
-          end: end
-        }
-      }).then(function(body){
+      request.post(post).then(function(body){
           task = body;
           pid = task.pid;
           ended = end;

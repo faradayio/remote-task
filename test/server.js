@@ -158,19 +158,88 @@ describe('A server', function(){
         .expect(200, done);
     });
 
-    it('should be gone from GET /task/:pid after it\'s deleted', function(done){
+    it('should shown as stopped in GET /task/:pid after it\'s deleted', function(done){
       request(app)
         .get('/tasks/'+createdTask.pid)
-        .expect(404, done);
+        .end(function(err, res){
+          if (err) {
+            return done(err);
+          }
+
+          var task = res.body;
+
+          validateTask(task, true, true, true);
+
+          done();
+        });
     });
 
-    it('should be gone from GET /tasks after it\'s deleted', function(done){
+    it('should be shown as stopped in GET /tasks after it\'s deleted', function(done){
       request(app)
         .get('/tasks')
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
         .expect(200)
-        .expect({}, done);
+        .end(function(err, res){
+          if (err) {
+            return done(err);
+          }
+
+          var tasks = res.body;
+          assert.equal(Object.keys(tasks).length, 1);
+
+          validateTask(tasks[Object.keys(tasks)[0]], true, true, true);
+
+          done();
+        });
+    });
+  });
+
+  describe('with a newly created task that has a timeout', function(){
+    var app = server();
+    var createdTask;
+
+    it('should respond with a task object', function(done){
+      request(app)
+        .post('/tasks')
+        .send({timeout: 1000, commands: ['sleep 10'], end: true})
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(200)
+        .end(function(err, res){
+          if (err) {
+            return done(err);
+          }
+
+          createdTask = res.body;
+
+          validateTask(createdTask, false, true);
+          assert.equal(createdTask.timeout, 1000);
+
+          done();
+        });
+    });
+
+    it('should create time out', function(done){
+      setTimeout(function(){
+        console.log(createdTask)
+        request(app)
+          .get('/tasks/'+createdTask.pid)
+          .set('Accept', 'application/json')
+          .expect('Content-Type', /json/)
+          .expect(200)
+          .end(function(err, res){
+            if (err) {
+              return done(err);
+            }
+
+            var task = res.body;
+
+            validateTask(task, true, true, true);
+
+            done();
+          });
+      }, 1100);
     });
   });
 });

@@ -92,6 +92,12 @@ function makeApp() {
       throw new UnprocessableEntity('req.body.commands must be an array of strings');
     }
 
+    var timeout = req.body.timeout;
+    if (typeof timeout !== 'undefined' && typeof timeout !== 'number') {
+      throw new UnprocessableEntity('req.body.timeout must be a number, or undefined');
+    }
+    timeout = timeout || 0;
+
     var shell = spawn('bash');
     var pid = shell.pid;
 
@@ -122,12 +128,27 @@ function makeApp() {
       writable: req.body.end !== true,
       errors: []
     };
+    if (timeout) {
+      task.timeout = timeout;
+    }
 
     shell.on('error', function(err){
       task.errors.push(err.stack || err);
     });
 
+    var killTimeout;
+    if (timeout) {
+      killTimeout = setTimeout(function(){
+        stopTaskByPid(pid).catch(function(err) {
+          console.error('failed to kill '+pid+' after '+timeout+'ms timeout', err && err.stack ? err.stack : err);
+        });
+      }, timeout);
+    }
+
     shell.on('exit', function(code, signal){
+      if (killTimeout) {
+        clearTimeout(killTimeout);
+      }
       task.running = false;
       task.code = code;
       task.signal = signal;
@@ -193,18 +214,19 @@ function makeApp() {
           if (err.message !== 'kill ESRCH') {
             throw err;
           }
-          delete tasks[pid];
+          tasks[pid].writable = false;
           delete stdin[pid];
           forget();
           resolve();
+          return true;
         }
       }
 
       var monitor = setInterval(check, 20);
 
-      check();
+      if (check()) return;
       process.kill(pid, 'SIGHUP');
-      check();
+      if (check()) return;
 
       timeouts.push(setTimeout(function(){
         process.kill(pid, 'SIGTERM');
