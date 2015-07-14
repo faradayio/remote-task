@@ -104,6 +104,8 @@ function makeApp() {
     var pid = shell.pid;
     var id = uuid.v4();
 
+    stdin[id] = new stream.PassThrough();
+
     fs.mkdir(idDir(id), function(err){
       if (err) {
         console.error('Error making directory', idDir(id), err);
@@ -111,11 +113,10 @@ function makeApp() {
 
       shell.stdout.pipe(fs.createWriteStream(idDir(id)+'/stdout.log'));
       shell.stderr.pipe(fs.createWriteStream(idDir(id)+'/stderr.log'));
-    });
 
-    stdin[id] = new stream.PassThrough();
-    stdin[id].pipe(shell.stdin);
-    stdin[id].pipe(fs.createWriteStream(idDir(id)+'/stdin.log'));
+      stdin[id].pipe(shell.stdin);
+      stdin[id].pipe(fs.createWriteStream(idDir(id)+'/stdin.log'));
+    });
 
     commands.forEach(function(cmd){
       stdin[id].write(cmd+'\n');
