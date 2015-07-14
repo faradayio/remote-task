@@ -116,6 +116,9 @@ function makeApp() {
 
       stdin[id].pipe(shell.stdin);
       stdin[id].pipe(fs.createWriteStream(idDir(id)+'/stdin.log'));
+      stdin[id].on('end', function(){
+        delete stdin[id];
+      })
     });
 
     commands.forEach(function(cmd){
@@ -124,7 +127,6 @@ function makeApp() {
 
     if (req.body.end === true) {
       stdin[id].end();
-      delete stdin[id];
     }
 
     var task = tasks[id] = {
