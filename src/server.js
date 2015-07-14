@@ -5,7 +5,9 @@ var fs = require('fs');
 var Promise = require('bluebird');
 var spawn = require('child_process').spawn;
 var through = require('through2').obj;
-var Stream = require('stream').Stream;
+var stream = require('stream');
+var uuid = require('uuid');
+
 var cwd = process.cwd();
 
 module.exports = makeApp;
@@ -62,8 +64,8 @@ function isString(thing) {
   return typeof thing === 'string';
 }
 
-function pidDir(pid) {
-  return cwd+'/'+pid;
+function idDir(id) {
+  return cwd+'/remote-task-'+id;
 }
 
 function makeApp() {
@@ -75,11 +77,11 @@ function makeApp() {
   }
 
   function getTask(req) {
-    if (typeof tasks[req.params.pid] === 'undefined') {
+    if (typeof tasks[req.params.id] === 'undefined') {
       throw new NotFound('task not found');
     }
 
-    return tasks[req.params.pid];
+    return tasks[req.params.id];
   }
 
   function createTask(req) {
@@ -100,28 +102,32 @@ function makeApp() {
 
     var shell = spawn('bash');
     var pid = shell.pid;
+    var id = uuid.v4();
 
-    fs.mkdir(pidDir(pid), function(err){
+    fs.mkdir(idDir(id), function(err){
       if (err) {
-        console.error('Error making directory', pidDir(pid), err);
+        console.error('Error making directory', idDir(id), err);
       }
 
-      shell.stdout.pipe(fs.createWriteStream(pidDir(pid)+'/stdout.log'));
-      shell.stderr.pipe(fs.createWriteStream(pidDir(pid)+'/stderr.log'));
+      shell.stdout.pipe(fs.createWriteStream(idDir(id)+'/stdout.log'));
+      shell.stderr.pipe(fs.createWriteStream(idDir(id)+'/stderr.log'));
     });
 
-    stdin[pid] = shell.stdin;
+    stdin[id] = new stream.PassThrough();
+    stdin[id].pipe(shell.stdin);
+    stdin[id].pipe(fs.createWriteStream(idDir(id)+'/stdin.log'));
 
     commands.forEach(function(cmd){
-      stdin[pid].write(cmd+'\n');
+      stdin[id].write(cmd+'\n');
     });
 
     if (req.body.end === true) {
-      stdin[pid].end();
-      delete stdin[pid];
+      stdin[id].end();
+      delete stdin[id];
     }
 
-    var task = tasks[pid] = {
+    var task = tasks[id] = {
+      id: id,
       pid: pid,
       startTime: Date.now(),
       running: true,
@@ -139,8 +145,8 @@ function makeApp() {
     var killTimeout;
     if (timeout) {
       killTimeout = setTimeout(function(){
-        stopTaskByPid(pid).catch(function(err) {
-          console.error('failed to kill '+pid+' after '+timeout+'ms timeout', err && err.stack ? err.stack : err);
+        stopTaskById(id).catch(function(err) {
+          console.error('failed to kill '+id+' after '+timeout+'ms timeout', err && err.stack ? err.stack : err);
         });
       }, timeout);
     }
@@ -162,17 +168,17 @@ function makeApp() {
       throw new UnprocessableEntity('trying to create task without a body');
     }
 
-    if (!/^[0-9]+$/.test(req.params.pid)) {
-      throw new UnprocessableEntity('req.body.pid must be a number');
+    if (!/^[0-9a-z\-]{36}$/.test(req.params.id)) {
+      throw new UnprocessableEntity('req.body.id must be a uuid');
     }
-    var pid = parseInt(req.params.pid);
+    var id = req.params.id;
 
     var commands = req.body.commands || [];
     if (!Array.isArray(commands) || commands.filter(isString).length !== commands.length) {
       throw new UnprocessableEntity('req.body.commands must be an array of strings');
     }
 
-    var task = tasks[pid];
+    var task = tasks[id];
     if (typeof task === 'undefined') {
       throw new NotFound('task not found');
     }
@@ -181,26 +187,30 @@ function makeApp() {
       throw new Error('trying to write to a closed stdin');
     }
 
-    if (typeof stdin[pid] === 'undefined' || !(stdin[pid] instanceof Stream)) {
+    if (typeof stdin[id] === 'undefined' || !(stdin[id] instanceof stream.Stream)) {
       throw new Error('invalid stdin stream');
     }
 
     commands.forEach(function(cmd){
-      stdin[pid].write(cmd+'\n');
+      stdin[id].write(cmd+'\n');
     });
 
     if (req.body.end === true) {
-      tasks[pid].writable = false;
-      stdin[pid].end();
-      delete stdin[pid];
+      tasks[id].writable = false;
+      stdin[id].end();
+      delete stdin[id];
     }
 
     return task;
   }
 
-  function stopTaskByPid(pid) {
+  function stopTaskById(id) {
     return new Promise(function(resolve, reject){
       var timeouts = [];
+      var task = tasks[id];
+      if (!task) {
+        throw new Error('no such task '+id);
+      }
 
       function forget(){
         clearInterval(monitor);
@@ -209,13 +219,13 @@ function makeApp() {
 
       function check(){
         try {
-          process.kill(pid, 0);
+          process.kill(task.pid, 0);
         } catch (err) {
           if (err.message !== 'kill ESRCH') {
             throw err;
           }
-          tasks[pid].writable = false;
-          delete stdin[pid];
+          task.writable = false;
+          delete stdin[id];
           forget();
           resolve();
           return true;
@@ -225,50 +235,50 @@ function makeApp() {
       var monitor = setInterval(check, 20);
 
       if (check()) return;
-      process.kill(pid, 'SIGHUP');
+      process.kill(task.pid, 'SIGHUP');
       if (check()) return;
 
       timeouts.push(setTimeout(function(){
-        process.kill(pid, 'SIGTERM');
+        process.kill(task.pid, 'SIGTERM');
         check();
       }, 5000));
 
       timeouts.push(setTimeout(function(){
-        process.kill(pid, 'SIGKILL');
+        process.kill(task.pid, 'SIGKILL');
         check();
       }, 10000));
 
       timeouts.push(setTimeout(function(){
         forget();
-        reject(new Error('unable to kill process '+pid));
+        reject(new Error('unable to kill process '+task.pid));
       }, 15000));
     });
   }
 
   function stopTask(req) {
-    if (!/^[0-9]+$/.test(req.params.pid)) {
-      throw new UnprocessableEntity('req.body.pid must be a number');
+    if (!/^[0-9a-z\-]{36}$/.test(req.params.id)) {
+      throw new UnprocessableEntity('req.body.id must be a uuid');
     }
-    var pid = parseInt(req.params.pid);
+    var id = req.params.id;
 
-    return stopTaskByPid(pid);
+    return stopTaskById(id);
   }
 
   function stopTasks() {
-    var pids = Object.keys(tasks);
+    var ids = Object.keys(tasks);
 
-    return Promise.all(pids.map(stopTaskByPid));
+    return Promise.all(ids.map(stopTaskById));
   }
 
   var app = express();
   app.use(bodyParser.json());
 
   app.get('/tasks', api(getTasks));
-  app.get('/tasks/:pid', api(getTask));
+  app.get('/tasks/:id', api(getTask));
   app.post('/tasks', api(createTask));
-  app.post('/tasks/:pid', api(addCommands));
+  app.post('/tasks/:id', api(addCommands));
   app.delete('/tasks', api(stopTasks));
-  app.delete('/tasks/:pid', api(stopTask));
+  app.delete('/tasks/:id', api(stopTask));
 
   return app;
 }

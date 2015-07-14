@@ -63,9 +63,9 @@ describe('A server', function(){
         });
     });
 
-    it('should create GET /tasks/:pid', function(done){
+    it('should create GET /tasks/:id', function(done){
       request(app)
-        .get('/tasks/'+createdTask.pid)
+        .get('/tasks/'+createdTask.id)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
         .expect(200)
@@ -97,11 +97,11 @@ describe('A server', function(){
 
           var tasks = res.body;
 
-          assert.deepEqual(Object.keys(tasks), [createdTask.pid]);
+          assert.deepEqual(Object.keys(tasks), [createdTask.id]);
 
-          validateTask(tasks[createdTask.pid]);
+          validateTask(tasks[createdTask.id]);
 
-          assert.deepEqual(createdTask, tasks[createdTask.pid]);
+          assert.deepEqual(createdTask, tasks[createdTask.id]);
 
           done();
         });
@@ -109,7 +109,7 @@ describe('A server', function(){
 
     it('should be appendable', function(done){
       request(app)
-        .post('/tasks/'+createdTask.pid)
+        .post('/tasks/'+createdTask.id)
         .send({commands: ['touch '+tmpFiles[0], 'touch '+tmpFiles[1]]})
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
@@ -154,13 +154,13 @@ describe('A server', function(){
 
     it('should be deletable', function(done){
       request(app)
-        .delete('/tasks/'+createdTask.pid)
+        .delete('/tasks/'+createdTask.id)
         .expect(200, done);
     });
 
-    it('should shown as stopped in GET /task/:pid after it\'s deleted', function(done){
+    it('should shown as stopped in GET /task/:id after it\'s deleted', function(done){
       request(app)
-        .get('/tasks/'+createdTask.pid)
+        .get('/tasks/'+createdTask.id)
         .end(function(err, res){
           if (err) {
             return done(err);
@@ -222,9 +222,8 @@ describe('A server', function(){
 
     it('should create time out', function(done){
       setTimeout(function(){
-        console.log(createdTask)
         request(app)
-          .get('/tasks/'+createdTask.pid)
+          .get('/tasks/'+createdTask.id)
           .set('Accept', 'application/json')
           .expect('Content-Type', /json/)
           .expect(200)

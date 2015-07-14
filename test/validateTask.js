@@ -2,6 +2,7 @@ var assert = require('assert');
 
 function validateTask(task, notRunning, notWriteable, unsuccessful) {
   /*
+    id: "c57579f3-af61-47cb-b803-10527b776c89",
     pid: 8302,
     startTime: 1433775287309,
     running: true,
@@ -11,6 +12,10 @@ function validateTask(task, notRunning, notWriteable, unsuccessful) {
   var testedAttrs = {};
 
   assert.equal(typeof task, 'object');
+
+  assert.equal(typeof task.id, 'string');
+  assert(/^[0-9a-z\-]{36}$/.test(task.id));
+  testedAttrs.id = true;
 
   assert.equal(typeof task.pid, 'number');
   assert(task.pid > 1);

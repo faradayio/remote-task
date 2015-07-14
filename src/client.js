@@ -8,7 +8,7 @@ function client(baseUrl, options){
       ending = false,
       retries = 0,
       errorCount = 0,
-      pid, req, task;
+      id, req, task;
 
   function send() {
     if (!queue.length && (!ending || ended)) {
@@ -27,8 +27,8 @@ function client(baseUrl, options){
 
     var url;
 
-    if (pid) {
-      url = '/tasks/'+pid;
+    if (id) {
+      url = '/tasks/'+id;
     } else {
       url = '/tasks';
     }
@@ -50,7 +50,7 @@ function client(baseUrl, options){
     req = (
       request.post(post).then(function(body){
           task = body;
-          pid = task.pid;
+          id = task.id;
           ended = end;
           req = null;
 
@@ -105,7 +105,7 @@ function client(baseUrl, options){
 
     return (
       request.get({
-        url: baseUrl+'/tasks/'+pid,
+        url: baseUrl+'/tasks/'+id,
         json: true
       }).then(function(body){
           task = body;
