@@ -2,6 +2,12 @@ var through = require('through2').obj;
 var request = require('request-promise');
 var Promise = require('bluebird');
 
+function wait(ms) {
+  return new Promise(function(resolve){
+    setTimeout(resolve, ms);
+  });
+}
+
 function client(baseUrl, options){
   var queue = [],
       ended = false,
@@ -75,7 +81,7 @@ function client(baseUrl, options){
             throw err;
           }
 
-          return send();
+          return wait(1000 * 10).then(send);
         })
     );
 
