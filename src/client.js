@@ -77,7 +77,7 @@ function client(baseUrl, options){
 
           retries++;
           if (retries === 10) {
-            console.log('Failed to run commands after 10 retries\n  '+commands.join('\n  '));
+            console.log('Failed to run commands after 10 retries\n  '+commands.join('\n  '), err);
             throw err;
           }
 
