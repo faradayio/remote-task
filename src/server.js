@@ -121,6 +121,7 @@ function makeApp() {
       })
     });
 
+    stdin[id].write('set -euo pipefail\n');
     commands.forEach(function(cmd){
       stdin[id].write(cmd+'\n');
     });
