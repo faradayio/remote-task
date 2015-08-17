@@ -36,8 +36,7 @@ function validateTask(task, notRunning, notWriteable, unsuccessful) {
 
   if (notRunning) {
     if (unsuccessful) {
-      assert.notEqual(task.code, 0);
-      assert.notEqual(task.signal, null);
+      assert.ok(task.code !== 0 || task.signal !== null);
     } else {
       assert.equal(task.code, 0);
       assert.equal(task.signal, null);

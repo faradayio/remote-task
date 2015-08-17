@@ -241,4 +241,50 @@ describe('A server', function(){
       }, 1100);
     });
   });
+
+  describe('with a broken task', function(){
+    var app = server();
+    var createdTask;
+
+    it('should respond with a task object', function(done){
+      request(app)
+        .post('/tasks')
+        .send({commands: ['exit 1'], end: true})
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(200)
+        .end(function(err, res){
+          if (err) {
+            return done(err);
+          }
+
+          createdTask = res.body;
+
+          validateTask(createdTask, false, true, true);
+
+          done();
+        });
+    });
+
+    it('should fail immediately', function(done){
+      setTimeout(function(){
+        request(app)
+          .get('/tasks/'+createdTask.id)
+          .set('Accept', 'application/json')
+          .expect('Content-Type', /json/)
+          .expect(200)
+          .end(function(err, res){
+            if (err) {
+              return done(err);
+            }
+
+            var task = res.body;
+
+            validateTask(task, true, true, true);
+
+            done();
+          });
+      }, 50);
+    });
+  });
 });

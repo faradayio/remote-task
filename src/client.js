@@ -13,7 +13,6 @@ function client(baseUrl, options){
       ended = false,
       ending = false,
       retries = 0,
-      errorCount = 0,
       id, req, task;
 
   function send() {
@@ -61,13 +60,6 @@ function client(baseUrl, options){
           req = null;
 
           var self = this;
-
-          task.errors.slice(0, errorCount)
-            .forEach(function(err){
-              self.emit('error', err);
-            });
-
-          errorCount += task.errors.length;
 
           send();
           return;
