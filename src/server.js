@@ -155,14 +155,17 @@ function makeApp() {
       }, timeout);
     }
 
-    shell.on('exit', function(code, signal){
+    function exiting (code, signal) {
       if (killTimeout) {
         clearTimeout(killTimeout);
       }
       task.running = false;
       task.code = code;
       task.signal = signal;
-    });
+    }
+
+    shell.on('exit', exiting);
+    shell.on('close', exiting);
 
     return task;
   }
@@ -215,6 +218,10 @@ function makeApp() {
       if (!task) {
         throw new Error('no such task '+id);
       }
+
+      task.running = false;
+      task.code = 1;
+      task.stopped = true;
 
       function forget(){
         clearInterval(monitor);

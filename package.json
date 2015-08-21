@@ -1,6 +1,6 @@
 {
   "name": "remote-task",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "description": "Task runner",
   "main": "src/index.js",
   "dependencies": {

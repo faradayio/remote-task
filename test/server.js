@@ -169,6 +169,7 @@ describe('A server', function(){
           var task = res.body;
 
           validateTask(task, true, true, true);
+          assert.equal(task.stopped, true);
 
           done();
         });
@@ -188,7 +189,9 @@ describe('A server', function(){
           var tasks = res.body;
           assert.equal(Object.keys(tasks).length, 1);
 
-          validateTask(tasks[Object.keys(tasks)[0]], true, true, true);
+          var firstTask = tasks[Object.keys(tasks)[0]];
+          validateTask(firstTask, true, true, true);
+          assert.equal(firstTask.stopped, true);
 
           done();
         });

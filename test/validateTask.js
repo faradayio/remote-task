@@ -43,6 +43,9 @@ function validateTask(task, notRunning, notWriteable, unsuccessful) {
     }
     testedAttrs.code = true;
     testedAttrs.signal = true;
+    if (task.stopped === true) {
+      testedAttrs.stopped = true;
+    }
   }
 
   if (task.hasOwnProperty('timeout')) {
